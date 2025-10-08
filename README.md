@@ -7,7 +7,7 @@ from the repository root (or adjust the path if needed) so the package imports
 resolve correctly:
 
 ```bash
-python -u test/llm_dataset_benchmark/serve_vllm.py \
+python -u serve_vllm.py \
   --model meta-llama/Llama-3.1-8B-Instruct \
   --dtype bfloat16 \
   --tensor-parallel-size 4 \
@@ -25,7 +25,7 @@ Use `data/prepare.py` under `RULER` to materialize synthetic benchmark splits.
 Run it from the repository root (or adjust the path) so imports resolve:
 
 ```bash
-python test/llm_dataset_benchmark/RULER/data/prepare.py \
+python data/prepare.py \
   --save_dir ./datasets \
   --task niah_single_1 \
   --tokenizer_path meta-llama/Llama-3.1-8B-Instruct \
@@ -41,14 +41,12 @@ Key flags:
 - `--max_seq_length`: keep within your hardware budget to avoid OOM during testing.
 - `--num_samples`: limit rows when experimenting or split runs across chunks.
 
-Adjust other CLI options (e.g. `--subset`, chunking) as needed for your workload.
-
 ## Running predictions
 
 After preparing a dataset, run inference with `pred/call_api.py`:
 
 ```bash
-python test/llm_dataset_benchmark/RULER/scripts/pred/call_api.py \
+python pred/call_api.py \
   --data_dir "${DATA_DIR}" \
   --save_dir "${PRED_DIR}" \
   --task "${TASK}" \
@@ -57,8 +55,7 @@ python test/llm_dataset_benchmark/RULER/scripts/pred/call_api.py \
   --temperature "${TEMPERATURE}" \
   --top_k "${TOP_K}" \
   --top_p "${TOP_P}" \
-  --batch_size "${BATCH_SIZE}" \
-  ${STOP_WORDS}
+  --batch_size "${BATCH_SIZE}"
 ```
 
 Where:
@@ -69,14 +66,12 @@ Where:
 - `SERVER_TYPE` selects the backend (`vllm`, `trtllm`, `hf`, `openai`, `gemini`, ...).
 - Remaining parameters tune sampling and batching for your evaluation.
 
-Add `--stop_words word1,word2` if you need to truncate generations on specific tokens.
-
 ## Evaluating predictions
 
 Generate summary metrics and submission CSVs with:
 
 ```bash
-python test/llm_dataset_benchmark/RULER/eval/evaluate.py \
+python eval/evaluate.py \
   --data_dir "${PRED_DIR}"
 ```
 
