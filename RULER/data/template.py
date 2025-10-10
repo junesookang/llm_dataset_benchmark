@@ -19,5 +19,5 @@ Templates = {
 
     'deepseek-ai': "<｜begin▁of▁sentence｜><｜User｜>{task_template}<｜Assistant｜><think>\n",
 
-    'Qwen': "<|im_start|>system\nYou are a helpful assistant.<|im_end|>\n<|im_start|>user\n{task_template}<|im_end|>\n<|im_start|>assistant\n\n",
+    'Qwen': "<|im_start|>system\n<|im_end|>\n<|im_start|>user\n{task_template}<|im_end|>\n<|im_start|>assistant\n\n",
 }
