@@ -7,3 +7,4 @@ __pycache__/
 
 RULER/datasets/*/*.jsonl
 RULER/predictions/*.jsonl
+RULER/predictions/*.csv

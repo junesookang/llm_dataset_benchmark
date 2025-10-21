@@ -41,6 +41,16 @@ Key flags:
 - `--max_seq_length`: keep within your hardware budget to avoid OOM during testing.
 - `--num_samples`: limit rows when experimenting or split runs across chunks.
 
+For GSM8K or MMLU-Pro, generate the evaluation data with `run_pred.py` instead of the RULER helper:
+
+```bash
+python -u run_pred.py \
+  --save-dir ./results \
+  --task gsm8k
+```
+
+Swap `gsm8k` for `mmlu_pro` when needed; outputs land under `./results`.
+
 ## Running predictions
 
 After preparing a dataset, run inference with `pred/call_api.py`:
