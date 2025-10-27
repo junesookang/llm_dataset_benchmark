@@ -2,16 +2,8 @@ import argparse
 import json
 from pathlib import Path
 
-from template import Templates, SYSTEM_PROMPT, BOS_TOKEN
+from template import Templates, THINK_TOKEN, BOS_TOKEN, EOS_TOKEN
 from task_summary import TASKS
-
-
-def resolve_template(model_name: str) -> tuple[str, str]:
-    """Return the template string for the tokenizer builder with fallback."""
-    builder = model_name.split("/")[0]
-    template = Templates.get(builder, Templates["base"])
-    sys_prompt = SYSTEM_PROMPT.get(builder, SYSTEM_PROMPT["base"])
-    return template, builder, sys_prompt
 
 
 def iter_jsonl(path: Path):
@@ -24,12 +16,21 @@ def iter_jsonl(path: Path):
             yield line_number, json.loads(line)
 
 
-def format_record(record: dict, template: str, sys_prompt: str) -> dict:
-    prompt = template.format(system_prompt=sys_prompt, task_template=record["prompt"])
+def format_record(record: dict, builder: str, add_think_token: bool) -> dict:
+    builder_template = Templates.get(builder)
+    eos = EOS_TOKEN.get(builder)
+    prompt = [BOS_TOKEN.get(builder)]
+    lengths = len(record["prompt"])
+    for i, p in enumerate(record["prompt"]):
+        prompt.append(builder_template.format(task_template=p["user"]) + p["assistant"])
+        if i < lengths - 1: # Don't add assistant eos for the last turn
+            prompt.append(eos)
+    if add_think_token:
+        prompt.append(THINK_TOKEN)
     outputs = record.get("outputs", []) + [record.get("answer")] if "answer" in record else []
     return {
         "index": record["index"],
-        "prompt": prompt,
+        "prompt": "".join(prompt),
         "outputs": outputs,
     }
 
@@ -52,30 +53,27 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    if args.major_task == "mmlu-pro":
-        template = Templates["base"]
-        builder = args.model_name.split("/")[0]
-        prompt_format = TASKS.get(args.major_task)["system_prompt"]
-    else:
-        template, builder, system_prompt = resolve_template(args.model_name)
+    args.add_think_token = "Distill" in args.model_name.split("/")[-1]
+    builder = args.model_name.split("/")[0]
     if builder not in Templates:
         print(f"Warning: no template registered for '{builder}'. Falling back to 'base'.")
+        builder = "base"
 
-    output_dir = Path(TASKS.get(args.major_task)["dataset_dir"])
-    output_dir.mkdir(parents=True, exist_ok=True)
-    dataset_dir = output_dir.parent / "datasets"
+    task_dir = Path(TASKS.get(args.major_task)["dataset_dir"])
+    dataset_dir = task_dir / "datasets"
     files = TASKS.get(args.major_task)["files"]
+
+    model_name = args.model_name.split("/")[-1]
+    output_dir = Path(__file__).resolve().parent / "tokenized_datasets" / model_name
+    output_dir.mkdir(parents=True, exist_ok=True)
 
     for file in files:
         input_file = dataset_dir / file
         output_path = output_dir / input_file.name
 
-        task_name = file.split("-")[-1].replace(".jsonl", "")
-        if args.major_task == "mmlu-pro":
-            system_prompt = BOS_TOKEN.get(builder, "") + prompt_format.replace("{$}", task_name) + "\n\n"
         with output_path.open("w", encoding="utf-8") as handle:
             for _, record in iter_jsonl(input_file):
-                formatted = format_record(record, template, system_prompt)
+                formatted = format_record(record, builder, args.add_think_token)
                 handle.write(json.dumps(formatted, ensure_ascii=False) + "\n")
 
         print(f"Tokenized data saved to {output_path}")

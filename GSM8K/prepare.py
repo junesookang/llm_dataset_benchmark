@@ -13,6 +13,7 @@
 # limitations under the License.
 """
 Preprocess the GSM8k dataset to parquet format
+https://github.com/volcengine/verl/tree/main/examples/data_preprocess/gsm8k.py
 """
 
 import argparse
@@ -54,7 +55,9 @@ if __name__ == "__main__":
             solution = extract_solution(answer_raw)
             data = {
                 "index": idx,
-                "prompt": question,
+                "prompt": [
+                    {"user": question, "assistant": ""}
+                ],
                 "answer": solution,
             }
             return data

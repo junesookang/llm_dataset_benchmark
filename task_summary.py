@@ -1,14 +1,12 @@
 TASKS = {
     "gsm8k": {
-        "dataset_dir": "GSM8K/tokenized_data",
+        "dataset_dir": "GSM8K",
         "max_new_tokens": 1024,
-        "system_prompt": "",
         "files": ["gsm8k.jsonl"]
     },
     "mmlu-pro": {
-        "dataset_dir": "MMLU-Pro/tokenized_data",
+        "dataset_dir": "MMLU-Pro",
         "max_new_tokens": 2048,
-        "system_prompt": 'The following are multiple choice questions (with answers) about {$}. Answer only the last question by thinking step by step and then finish your answer with "the answer is (X)" where X is the correct letter choice.',
         "files": [
             "mmlu-pro-biology.jsonl",
             "mmlu-pro-business.jsonl",
@@ -27,9 +25,8 @@ TASKS = {
         ]
     },
     "ruler": {
-        "dataset_dir": "RULER/tokenized_data",
+        "dataset_dir": "RULER",
         "max_new_tokens": 512,
-        "system_prompt": "",
         "files": [
             "cwe.jsonl",
             "fwe.jsonl",

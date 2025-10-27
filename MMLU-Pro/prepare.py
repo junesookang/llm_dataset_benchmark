@@ -9,7 +9,10 @@ from datasets import load_dataset
 choices = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"]
 max_model_length = 4096
 max_new_tokens = 2048
-random.seed(12345)
+# random.seed(12345) # Commented out to ensure different shuffles on each run
+
+INITIAL_PROMPT_PATH = Path(__file__).resolve().parent / "initial_prompt.txt"
+INITIAL_PROMPT_TEXT = INITIAL_PROMPT_PATH.read_text(encoding="utf-8")
 
 
 def load_mmlu_pro():
@@ -24,9 +27,8 @@ def preprocess(test_df):
     res_df = []
     for each in test_df:
         options = [opt for opt in each["options"] if opt != "N/A"]
-        example = dict(each)
-        example["options"] = options
-        res_df.append(example)
+        each["options"] = options
+        res_df.append(each)
     return res_df
 
 
@@ -43,36 +45,44 @@ def select_by_category(df, subject, exclude_question=None):
 
 def format_cot_example(example, including_answer=True):
     prompt_parts = [
-        f"Question: {example['question']}\n",
-        "Options: ",
+        f"Question:\n{example['question']}\n",
+        "Options:\n",
     ]
     prompt_parts.extend(
         f"{choices[i]}. {opt}\n" for i, opt in enumerate(example["options"])
     )
 
     if including_answer:
-        cot_content = (example.get("cot_content") or "").strip()
-        if cot_content == "":
-            cot_content = "Let's think step by step."
-        if cot_content.startswith("A: "):
-            cot_content = cot_content[3:].strip()
+        cot_content = example["cot_content"].replace("A: Let's think step by step.",
+                                                     "Answer: Let's think step by step.")
+        #cot_content += "\n\n"
     else:
-        cot_content = "Let's think step by step."
+        cot_content = "Answer: Let's think step by step."
 
-    content = f"Answer: {cot_content}" + ("\n\n" if including_answer else "")
-    prompt_parts.append(content)
-    return "".join(prompt_parts)
+    #prompt_parts.append(cot_content)
+    return "".join(prompt_parts), cot_content
+
 
 def generate_cot_prompt(val_df, curr, k):
+    assert k > 0
     subject = curr["category"]
     in_context_examples = select_by_category(val_df, subject, exclude_question=curr["question"])
     random.shuffle(in_context_examples)
     in_context_examples = in_context_examples[:k]
-    prompt = ""
-    for example in in_context_examples:
-        prompt += format_cot_example(example, including_answer=True)
-    prompt += format_cot_example(curr, including_answer=False)
-    return prompt
+    prompts = []
+    # initial prompt
+    prompt = INITIAL_PROMPT_TEXT.replace("{$}", subject)
+    user, assistant = format_cot_example(in_context_examples[0], including_answer=True)
+    prompt += user
+    prompts.append({"user": prompt, "assistant": assistant})
+    # remaining in-context examples
+    for example in in_context_examples[1:]:
+        user, assistant = format_cot_example(example, including_answer=True)
+        prompts.append({"user": user, "assistant": assistant})
+    # last instruction without answer
+    user, assistant = format_cot_example(curr, including_answer=False)
+    prompts.append({"user": user, "assistant": assistant})
+    return prompts
 
 
 if __name__ == "__main__":
@@ -108,10 +118,10 @@ if __name__ == "__main__":
         test_df = select_by_category(full_test_df, subject)
         val_df = select_by_category(full_val_df, subject)
         for example in test_df:
-            prompt = generate_cot_prompt(val_df, example, args.chains)
+            prompts = generate_cot_prompt(val_df, example, args.chains)
             records.append({
                 "index": example["question_id"],
-                "prompt": prompt,
+                "prompt": prompts,
                 "answer": example["answer"],
             })
         output_path = save_dir / f"mmlu-pro-{subject}.jsonl"

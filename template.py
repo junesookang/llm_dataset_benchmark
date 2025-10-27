@@ -13,14 +13,16 @@
 # limitations under the License.
 
 Templates = {
-    'base': "{system_prompt}{task_template}",
+    'base': "{task_template}",
 
-    'meta-llama': "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n{system_prompt}<|eot_id|><|start_header_id|>user<|end_header_id|>\n\n{task_template}<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n",
+    'meta-llama': "<|start_header_id|>user<|end_header_id|>\n\n{task_template}<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n",
 
-    'deepseek-ai': "<｜begin▁of▁sentence｜><｜User｜>{system_prompt}{task_template}<｜Assistant｜><think>\n",
+    'deepseek-ai': "<｜User｜>{task_template}<｜Assistant｜>",
 
-    'Qwen': "<|im_start|>system\n{system_prompt}<|im_end|>\n<|im_start|>user\n{task_template}<|im_end|>\n<|im_start|>assistant\n\n",
+    'Qwen': "<|im_start|>user\n{task_template}<|im_end|>\n<|im_start|>assistant\n",
 }
+
+THINK_TOKEN = "<think>\n" # shared by 'deepseek-ai' and 'Qwen'
 
 BOS_TOKEN = {
     'base': "",
@@ -32,12 +34,12 @@ BOS_TOKEN = {
     'Qwen': "",
 }
 
-SYSTEM_PROMPT = {
+EOS_TOKEN = {
     'base': "",
 
-    'meta-llama': "You are a helpful assistant",
+    'meta-llama': "<|eot_id|>",
 
-    'deepseek-ai': "",
+    'deepseek-ai': "<｜end▁of▁sentence｜>",
 
-    'Qwen': "You are a helpful assistant.",
+    'Qwen': "<|im_end|>\n",
 }
