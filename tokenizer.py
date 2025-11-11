@@ -16,10 +16,10 @@ def iter_jsonl(path: Path):
             yield line_number, json.loads(line)
 
 
-def format_record(record: dict, builder: str, add_think_token: bool) -> dict:
+def format_record(record: dict, builder: str, add_think_token: bool, add_bos_token: bool) -> dict:
     builder_template = Templates.get(builder)
     eos = EOS_TOKEN.get(builder)
-    prompt = [BOS_TOKEN.get(builder)]
+    prompt = [BOS_TOKEN.get(builder)] if add_bos_token else []
     lengths = len(record["prompt"])
     for i, p in enumerate(record["prompt"]):
         prompt.append(builder_template.format(task_template=p["user"]) + p["assistant"])
@@ -53,6 +53,7 @@ def main() -> None:
     )
     args = parser.parse_args()
 
+    args.add_bos_token = "Llama" not in args.model_name.split("/")[-1]
     args.add_think_token = "Distill" in args.model_name.split("/")[-1]
     builder = args.model_name.split("/")[0]
     if builder not in Templates:
@@ -73,7 +74,7 @@ def main() -> None:
 
         with output_path.open("w", encoding="utf-8") as handle:
             for _, record in iter_jsonl(input_file):
-                formatted = format_record(record, builder, args.add_think_token)
+                formatted = format_record(record, builder, args.add_think_token, args.add_bos_token)
                 handle.write(json.dumps(formatted, ensure_ascii=False) + "\n")
 
         print(f"Tokenized data saved to {output_path}")

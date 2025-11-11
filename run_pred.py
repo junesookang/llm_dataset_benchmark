@@ -148,10 +148,10 @@ def main() -> None:
     args.top_p = gen_config.top_p if gen_config.top_p is not None else 1.0
     args.temperature = gen_config.temperature if gen_config.temperature is not None else 1.0
     task = SUB_TASK_MAP.get(args.task)
-    dataset_dir = Path(TASKS.get(task)["dataset_dir"])
+    dataset_dir = Path("tokenized_datasets") / args.model_name.split("/")[-1]
     filename = f"mmlu-pro-{args.task}.jsonl" if task == "mmlu-pro" else f"{args.task}.jsonl"
     task_file = dataset_dir / filename
-    pred_file = args.save_dir / task / filename
+    pred_file = args.save_dir / args.model_name.split("/")[-1] / filename
     pred_file.parent.mkdir(parents=True, exist_ok=True)
 
     LOGGER.info("Predicting %s from %s into %s", args.task, task_file, pred_file)

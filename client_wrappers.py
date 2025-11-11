@@ -107,6 +107,7 @@ class VLLMClient(Client):
             "top_k": top_k,
             "top_p": top_p,
             "stop": list(stop),
+            "skip_special_tokens": False,
         }
         response = self._send_request(request)
         return response.get("text", [])
