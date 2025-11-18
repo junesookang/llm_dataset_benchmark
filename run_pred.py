@@ -57,7 +57,7 @@ def parse_args() -> argparse.Namespace:
 def load_dataset(task_file: Path, pred_file: Path) -> List[Dict]:
     if pred_file.exists():
         existing_indices = {sample["index"] for sample in read_manifest(pred_file)}
-        LOGGER.info("Resuming prediction; skipping %%d existing entries.", len(existing_indices))
+        #LOGGER.info("Resuming prediction; skipping %%d existing entries.", len(existing_indices))
         return [sample for sample in read_manifest(task_file) if sample["index"] not in existing_indices]
     return read_manifest(task_file)
 

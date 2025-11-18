@@ -32,6 +32,51 @@ def extract_solution(solution_str):
     return final_solution
 
 
+def load_hard_prompts():
+    file = "prompt_hardest.txt"
+    with open(file, "r") as f:
+        hard_prompts = f.read().strip()
+    hard_prompts = hard_prompts.split("\n\n")
+    prompt = []
+    for item in hard_prompts:
+        splits = item.split("\nLet's think step by step\n")
+        question = splits[0].replace("Question: ", "").strip()
+        answer = splits[1].strip()
+        prompt.append({"question": question, "answer": answer})
+    return prompt
+
+
+def format_cot_example(example, including_answer=True):
+
+    if including_answer:
+        cot_content, answer = example["answer"].split("\nThe answer is ")
+        answer = answer.replace("\n", "").strip()
+        cot_content = "Answer: Let's think step by step.\n" + cot_content.strip()
+        cot_content += f"\nThe final answer is: $\\boxed{{{answer}}}$"
+    else:
+        cot_content = "Answer: Let's think step by step.\n"
+
+    return f"Question: {example['question']}", cot_content
+
+
+def generate_cot_prompt(in_context_examples, curr):
+    prompts = []
+    # initial prompt
+    instruction_following = "Please reason step by step, and put your final answer within \\boxed{}."
+    prompt = instruction_following + "\n\n"
+    user, assistant = format_cot_example(in_context_examples[0], including_answer=True)
+    prompt += user
+    prompts.append({"user": prompt, "assistant": assistant})
+    # remaining in-context examples
+    for example in in_context_examples[1:]:
+        user, assistant = format_cot_example(example, including_answer=True)
+        prompts.append({"user": user, "assistant": assistant})
+    # last instruction without answer
+    user, assistant = format_cot_example(curr, including_answer=False)
+    prompts.append({"user": user, "assistant": assistant})
+    return prompts
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--save_dir", type=str, default="datasets")
@@ -41,6 +86,7 @@ if __name__ == "__main__":
     dataset = datasets.load_dataset("openai/gsm8k", "main")
 
     test_dataset = dataset["test"]
+    hard_prompts = load_hard_prompts()
 
     instruction_following = "Please reason step by step, and put your final answer within \\boxed{}."
 
@@ -49,15 +95,17 @@ if __name__ == "__main__":
         def process_fn(example, idx):
             question_raw = example.pop("question")
 
-            question = question_raw + " " + instruction_following
-
             answer_raw = example.pop("answer")
+
+            curr = {
+                "question": question_raw,
+                "cot_content": answer_raw,
+            }
+            prompts = generate_cot_prompt(hard_prompts, curr)
             solution = extract_solution(answer_raw)
             data = {
                 "index": idx,
-                "prompt": [
-                    {"user": question, "assistant": ""}
-                ],
+                "prompt": prompts,
                 "answer": solution,
             }
             return data

@@ -53,22 +53,20 @@ def format_cot_example(example, including_answer=True):
     )
 
     if including_answer:
-        cot_content = example["cot_content"].replace("A: Let's think step by step.",
-                                                     "Answer: Let's think step by step.")
+        cot_content = example["cot_content"].replace("A: Let's think step by step. ",
+                                                     "Answer: Let's think step by step.\n").strip()
+        sentences = cot_content.split(". ")
+        cot_content = ".\n".join(sentences)
         #cot_content += "\n\n"
     else:
-        cot_content = "Answer: Let's think step by step."
+        cot_content = "Answer: Let's think step by step.\n"
 
     #prompt_parts.append(cot_content)
     return "".join(prompt_parts), cot_content
 
 
-def generate_cot_prompt(val_df, curr, k):
-    assert k > 0
+def generate_cot_prompt(in_context_examples, curr):
     subject = curr["category"]
-    in_context_examples = select_by_category(val_df, subject, exclude_question=curr["question"])
-    random.shuffle(in_context_examples)
-    in_context_examples = in_context_examples[:k]
     prompts = []
     # initial prompt
     prompt = INITIAL_PROMPT_TEXT.replace("{$}", subject)
@@ -116,9 +114,15 @@ if __name__ == "__main__":
     for subject in selected_subjects:
         records = []
         test_df = select_by_category(full_test_df, subject)
-        val_df = select_by_category(full_val_df, subject)
+        in_context_examples = select_by_category(full_val_df, subject)
+        in_context_examples = sorted(
+            in_context_examples,
+            key=lambda ex: len(ex["cot_content"]),
+            reverse=True
+        )
+        in_context_examples = in_context_examples[:args.chains]
         for example in test_df:
-            prompts = generate_cot_prompt(val_df, example, args.chains)
+            prompts = generate_cot_prompt(in_context_examples, example)
             records.append({
                 "index": example["question_id"],
                 "prompt": prompts,
