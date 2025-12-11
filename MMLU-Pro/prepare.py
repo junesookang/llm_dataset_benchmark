@@ -65,21 +65,25 @@ def format_cot_example(example, including_answer=True):
     return "".join(prompt_parts), cot_content
 
 
-def generate_cot_prompt(in_context_examples, curr):
+def generate_cot_prompt(in_context_examples, curr, use_icl):
     subject = curr["category"]
     prompts = []
     # initial prompt
     prompt = INITIAL_PROMPT_TEXT.replace("{$}", subject)
-    user, assistant = format_cot_example(in_context_examples[0], including_answer=True)
-    prompt += user
-    prompts.append({"user": prompt, "assistant": assistant})
-    # remaining in-context examples
-    for example in in_context_examples[1:]:
-        user, assistant = format_cot_example(example, including_answer=True)
+    if use_icl:
+        user, assistant = format_cot_example(in_context_examples[0], including_answer=True)
+        prompt += user
+        prompts.append({"user": prompt, "assistant": assistant})
+        # remaining in-context examples
+        for example in in_context_examples[1:]:
+            user, assistant = format_cot_example(example, including_answer=True)
+            prompts.append({"user": user, "assistant": assistant})
+        # last instruction without answer
+        user, assistant = format_cot_example(curr, including_answer=False)
         prompts.append({"user": user, "assistant": assistant})
-    # last instruction without answer
-    user, assistant = format_cot_example(curr, including_answer=False)
-    prompts.append({"user": user, "assistant": assistant})
+    else:
+        user, assistant = format_cot_example(curr, including_answer=False)
+        prompts.append({"user": prompt + user, "assistant": assistant})
     return prompts
 
 
@@ -88,6 +92,7 @@ if __name__ == "__main__":
     parser.add_argument("--chains", type=int, default=5)
     parser.add_argument("--selected_subjects", "-sub", type=str, default="all")
     parser.add_argument("--save_dir", "-s", type=str, default="datasets")
+    parser.add_argument("--icl", action="store_true", help="whether to use in-context learning")
     args = parser.parse_args()
 
     save_dir = Path(args.save_dir)
@@ -122,13 +127,13 @@ if __name__ == "__main__":
         )
         in_context_examples = in_context_examples[:args.chains]
         for example in test_df:
-            prompts = generate_cot_prompt(in_context_examples, example)
+            prompts = generate_cot_prompt(in_context_examples, example, args.icl)
             records.append({
                 "index": example["question_id"],
                 "prompt": prompts,
                 "answer": example["answer"],
             })
-        output_path = save_dir / f"mmlu-pro-{subject}.jsonl"
+        output_path = save_dir / f"mmlu-pro-{subject}.jsonl" if not args.icl else save_dir / f"mmlu-pro-{subject}_icl.jsonl"
         with output_path.open("w", encoding="utf-8") as f:
             for record in records:
                 f.write(json.dumps(record) + "\n")

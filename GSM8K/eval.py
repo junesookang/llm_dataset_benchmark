@@ -22,17 +22,22 @@ if __name__ == "__main__":
         for line in map(json.loads, f):
             # Parse ground-truth answers
             answer = [float(obj) for obj in line["outputs"]]
+            id = line["index"]
 
             # Extract text inside \boxed{}
             pred_raw = line["pred"].split("\\boxed{")[-1].split("}")[0]
             pred_raw = pred_raw.replace(",", "").strip()
 
             # Try converting prediction to float; fallback to +inf
+            if "$" in pred_raw:
+                pred_raw = pred_raw.replace("$", "")
+            if " " in pred_raw:
+                pred_raw = pred_raw.replace(" ", "")
             try:
                 pred = float(pred_raw)
             except ValueError:
-                wrong_by_out_of_line += 1
-                pred = float("inf")
+                    wrong_by_out_of_line += 1
+                    pred = float("inf")
 
             answers.append(answer)
             preds.append(pred)

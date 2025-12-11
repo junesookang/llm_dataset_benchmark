@@ -59,27 +59,32 @@ def format_cot_example(example, including_answer=True):
     return f"Question: {example['question']}", cot_content
 
 
-def generate_cot_prompt(in_context_examples, curr):
+def generate_cot_prompt(in_context_examples, curr, use_icl):
     prompts = []
     # initial prompt
     instruction_following = "Please reason step by step, and put your final answer within \\boxed{}."
     prompt = instruction_following + "\n\n"
-    user, assistant = format_cot_example(in_context_examples[0], including_answer=True)
-    prompt += user
-    prompts.append({"user": prompt, "assistant": assistant})
-    # remaining in-context examples
-    for example in in_context_examples[1:]:
-        user, assistant = format_cot_example(example, including_answer=True)
+    if use_icl:
+        user, assistant = format_cot_example(in_context_examples[0], including_answer=True)
+        prompt += user
+        prompts.append({"user": prompt, "assistant": assistant})
+        # remaining in-context examples
+        for example in in_context_examples[1:]:
+            user, assistant = format_cot_example(example, including_answer=True)
+            prompts.append({"user": user, "assistant": assistant})
+        # last instruction without answer
+        user, assistant = format_cot_example(curr, including_answer=False)
         prompts.append({"user": user, "assistant": assistant})
-    # last instruction without answer
-    user, assistant = format_cot_example(curr, including_answer=False)
-    prompts.append({"user": user, "assistant": assistant})
+    else:
+        user, assistant = format_cot_example(curr, including_answer=False)
+        prompts.append({"user": prompt + user, "assistant": assistant})
     return prompts
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--save_dir", type=str, default="datasets")
+    parser.add_argument("--icl", action="store_true", help="whether to use in-context learning")
     args = parser.parse_args()
 
     data_source = "openai/gsm8k"
@@ -101,7 +106,7 @@ if __name__ == "__main__":
                 "question": question_raw,
                 "cot_content": answer_raw,
             }
-            prompts = generate_cot_prompt(hard_prompts, curr)
+            prompts = generate_cot_prompt(hard_prompts, curr, args.icl)
             solution = extract_solution(answer_raw)
             data = {
                 "index": idx,
@@ -116,5 +121,5 @@ if __name__ == "__main__":
 
     save_dir = Path(args.save_dir)
     save_dir.mkdir(parents=True, exist_ok=True)
-    output_path = save_dir / "gsm8k.jsonl"
+    output_path = save_dir / "gsm8k.jsonl" if not args.icl else save_dir / "gsm8k_icl.jsonl"
     test_dataset.to_json(str(output_path))
