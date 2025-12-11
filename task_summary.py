@@ -4,6 +4,11 @@ TASKS = {
         "max_new_tokens": 1024,
         "files": ["gsm8k.jsonl"]
     },
+    "gsm8k_icl": {
+        "dataset_dir": "GSM8K",
+        "max_new_tokens": 1024,
+        "files": ["gsm8k_icl.jsonl"]
+    },
     "mmlu-pro": {
         "dataset_dir": "MMLU-Pro",
         "max_new_tokens": 2048,

@@ -23,7 +23,8 @@ import uvicorn
 from vllm.engine.arg_utils import AsyncEngineArgs
 from vllm.engine.async_llm_engine import AsyncLLMEngine
 from vllm.sampling_params import SamplingParams
-from vllm.utils import FlexibleArgumentParser, random_uuid
+from vllm.utils import random_uuid
+from vllm.utils.argparse_utils import FlexibleArgumentParser
 
 TIMEOUT_KEEP_ALIVE = 5  # seconds.
 STREAM_DELIMITER = "\0"
